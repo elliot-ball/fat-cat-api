@@ -5,6 +5,8 @@ const helmet = require("helmet");
 const jwt = require("express-jwt");
 const jwksRsa = require("jwks-rsa");
 const { resolve } = require("path");
+var gplay = require('google-play-scraper');
+
 
 require("dotenv").config({
   path: resolve(process.cwd(), ".env"),
@@ -73,6 +75,38 @@ app.post("/api/list", (req, res) => {
     }).catch(error => {
       res.send(error);
     });
+});
+
+app.get('/search', async (request, response) => {
+    
+  let val = await gplay.search({
+      term: request.query.value,
+      num: 10,
+      lang: 'en',
+      country: 'uk',
+      fullDetail: false,
+      price: 'free'
+  });
+  response.send(val)
+});
+
+app.get('/playstore', async (request, response) => {
+    
+  let val = await gplay.app({
+      appId: request.query.value
+  });
+  response.send(val)
+});
+
+app.get('/playstore/reviews', async (request, response) => {
+    
+  let val = await gplay.reviews({
+      appId: request.query.value
+  });
+  let textReviews = val.data.map((review) => {
+    return review.text;
+  });
+  response.send(textReviews)
 });
 
 app.get("/api/private-message", checkJwt, (req, res) => {
