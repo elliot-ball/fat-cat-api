@@ -14,6 +14,7 @@
     "natural": "^2.4.0",
     "sentiment": "^5.0.2",
     "spelling-corrector": "^3.0.0",
-    "stopword": "^1.0.6"
+    "stopword": "^1.0.6",
+    "tinypg": "^5.3.1"
   }
 }
