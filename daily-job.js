@@ -1,32 +1,34 @@
 const database = require('./database');
 const playstoreApi = require('./playstore-api');
 
-const explodeIAPRange = (app) => {
+const explodeIapRange = (app) => {
+
     let result = {
-        IAPRangeLower: null,
-        IAPRangeUpper: null,
-        fixedRateIAP: false
+        iapRangeLower: null,
+        iapRangeUpper: null,
+        fixedRateIap: false,
+        iapRange: app.IAPRange
     };
-    if (app.IAPRange) {
+
+    if (result.iapRange) {
         
-        let matches = app.IAPRange.match(/£(\d+\.\d+)\s-\s£(\d+\.\d+)/);
-        console.log(app.IAPRange);
-        console.log(matches);
+        let matches = result.iapRange.match(/£(\d+\.\d+)\s-\s£(\d+\.\d+)/);
+
         if (matches !== null) {
 
-            result.IAPRangeLower = matches[1];    
-            result.IAPRangeUpper = matches[2];
+            result.iapRangeLower = matches[1];    
+            result.iapRangeUpper = matches[2];
 
         }
         else {
 
-            matches = app.IAPRange.match(/£(\d+\.\d+)/);
+            matches = result.iapRange.match(/£(\d+\.\d+)/);
 
             if (matches !== null) {
 
-                result.IAPRangeLower = matches[1];
-                result.IAPRangeUpper = matches[1];
-                result.fixedRateIAP = true;
+                result.iapRangeLower = matches[1];
+                result.iapRangeUpper = matches[1];
+                result.fixedRateIap = true;
 
             }
 
@@ -39,7 +41,7 @@ const explodeIAPRange = (app) => {
 const getAppDetails = async (appId) => {
 
     let matchingApp = await database.getAppByPlaystoreID(appId);
-
+    // console.log(matchingApp)
     if (matchingApp) {
         console.log('we already have this app');
         return matchingApp;
@@ -47,9 +49,9 @@ const getAppDetails = async (appId) => {
     else {
 
         const playstoreApp = await playstoreApi.getAppByPlaystoreId(appId);
-        const { IAPRangeLower, IAPRangeUpper, fixedRateIAP } = explodeIAPRange(playstoreApp);
+        const { iapRange, iapRangeLower, iapRangeUpper, fixedRateIap } = explodeIapRange(playstoreApp);
 
-        await database.insertApp({ ...playstoreApp, IAPRangeLower, IAPRangeUpper, fixedRateIAP });
+        await database.insertApp({ ...playstoreApp, iapRange, iapRangeLower, iapRangeUpper, fixedRateIap });
         console.log('new app added:' + playstoreApp.title);
         matchingApp = await database.getAppByPlaystoreID(appId);
         return matchingApp;
@@ -95,7 +97,7 @@ const testInsert = async () => {
 
     let app = await getAppDetails('com.ta.offline.strike.force');
 
-    console.log(app.app_id);
+    console.log(app.appId);
 
 }
 

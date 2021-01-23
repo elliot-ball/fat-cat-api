@@ -1,6 +1,7 @@
 // const { Pool } = require('pg'); // Enables querying postgresql DB
 const { TinyPg } = require('tinypg');
 const { resolve } = require('path');
+const { snakeKeysToCamel } = require('./utils/camelCase');
 
 require("dotenv").config({
     path: resolve(process.cwd(), ".env"),
@@ -22,7 +23,7 @@ module.exports.getAllCategories = () => {
     return pool.query(`
         select * from category
     `).then(result => {
-        return result.rows;
+        return snakeKeysToCamel(result.rows);
     }).catch(error => {
         console.log(error);
     });
@@ -35,7 +36,7 @@ module.exports.getAppByPlaystoreID = (playstoreID) => {
     `, { playstoreID: playstoreID }).then(result => {
         // console.log(result);
         if (result.rows.length > 0) {
-            return result.rows[0];
+            return snakeKeysToCamel(result.rows[0]);
         }
         else {
             return false;
@@ -106,11 +107,11 @@ module.exports.insertApp = (app) => {
             :reviews,
             :price,
             :free,
-            :offersIAP,
-            :IAPRange,
-            :IAPRangeUpper,
-            :IAPRangeLower,
-            :fixedRateIAP,
+            :offersIap,
+            :iapRange,
+            :iapRangeUpper,
+            :iapRangeLower,
+            :fixedRateIap,
             :size,
             :androidVersion,
             :developer,
@@ -146,11 +147,11 @@ module.exports.insertApp = (app) => {
         reviews: app.reviews,
         price: app.price,
         free: app.free,
-        offersIAP: app.offersIAP,
-        IAPRange: app.IAPRange,
-        IAPRangeUpper: app.IAPRangeUpper,
-        IAPRangeLower: app.IAPRangeLower,
-        fixedRateIAP: app.fixedRateIAP,
+        offersIap: app.offersIap,
+        iapRange: app.iapRange,
+        iapRangeUpper: app.iapRangeUpper,
+        iapRangeLower: app.iapRangeLower,
+        fixedRateIap: app.fixedRateIap,
         size: app.size,
         androidVersion: app.androidVersion,
         developer: app.developer,
