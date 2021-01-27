@@ -1,3 +1,4 @@
+var path = require('path');
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -114,5 +115,9 @@ app.get("/api/private-message", checkJwt, (req, res) => {
     msg: "The API successfully validated your access token.",
   });
 });
+
+var dir = path.join(__dirname, 'icons');
+
+app.use(express.static(dir));
 
 app.listen(port, () => console.log(`API Server listening on port ${port}`));

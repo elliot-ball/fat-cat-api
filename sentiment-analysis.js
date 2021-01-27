@@ -3,6 +3,8 @@ const natural = require('natural');
 const SpellCorrector = require('spelling-corrector');
 const SW = require('stopword');
 var Sentiment = require('sentiment');
+const database = require('./database');
+var cloneDeep = require('lodash.clonedeep');
 
 // for each game
 //     for each review
@@ -11,41 +13,27 @@ var Sentiment = require('sentiment');
 //             identify which keyword has the most matches
 //             sentiment analysis on sentence
             
-
 // find keywords in reviews
-function isMatchedWord (givenWordArray) {
-
-    const keywords = [
-        { name: 'grindy', keywords: ['grindy', 'grind'], phrases: [] },
-        { name: 'adverts', keywords: ['advert', 'adverts', 'ad', 'ads', 'advertisement', 'advertisements'], phrases: ['too many ads', 'too much ads'] },
-        { name: 'lootboxes', keywords: ['lootbox', 'lootboxes', 'crate'], phrases: [] },
-        { name: 'timers', keywords: ['wait', 'timers'], phrases: [] },
-        { name: 'pay to win', keywords: ['p2w'], phrases: ['pay to win']},
-        { name: 'free to play', keywords: ['f2p',], phrases: ['free to play'] },
-    ];
-
-    let keywordCount = {
-        grindy: 0,
-        adverts: 0,
-        lootboxes: 0,
-        timers: 0,
-        payToWin: 0,
-        freeToPlay: 0,
-    }
-
-    keywords.forEach((keyWord) => {
-        keyWord.keywords.forEach((word) => {
+function isMatchedWord (givenWordArray, keywords) {
+    let keywordCount = {};
+    keywords.forEach((keyword) => {
+        keywordCount[keyword.key] = 0;
+    });
+    // console.log(givenWordArray)
+    keywords.forEach((keyword) => {
+        keyword.keywords.forEach((word) => {
             givenWordArray.forEach((givenWord) => {
                 if (givenWord === word) {
-                    keywordCount[keyWord.name]++;
+                    keywordCount[keyword.key]++;
                 }
             });
         });
-        // keyWord.phrases.forEach((phrase) => {
-        //     if (stringReview.indexOf(phrase) > 0) {
-        //         keyWordCount[keyWord.name]++;
-        //     }
-        // });
+        keyword.phrases.forEach((phrase) => {
+            let string = givenWordArray.join(' ');
+            if (string.indexOf(phrase) > 0) {
+                keywordCount[keyword.key]++;
+            }
+        });
     });
 
     return keywordCount;
@@ -415,49 +403,97 @@ const v1Approach = (text) => {
     
 }
 
-const analyse = (text) => {
-    const lexedReview = aposToLexForm(text);
-    const casedReview = lexedReview.toLowerCase();
-
-
-    const { WordTokenizer } = natural;
-    const tokenizer = new WordTokenizer();
-    const tokenizedReview = tokenizer.tokenize(casedReview);
-
-    return isMatchedWord(tokenizedReview);
+const analyse = (text, keywords) => {
+    try {
+        const lexedReview = aposToLexForm(text);
+        const casedReview = lexedReview.toLowerCase();
+    
+    
+        const { WordTokenizer } = natural;
+        const tokenizer = new WordTokenizer();
+        const tokenizedReview = tokenizer.tokenize(casedReview);
+    
+        return isMatchedWord(tokenizedReview, keywords);
+        
+    } catch (error) {
+        console.log('error trying to analyse text:');
+        console.log(text);
+        console.log(error);
+    }
 
 }
 
-const main = () => {
+const pullKeywords = async () => {
+    const result = await database.getKeywordTargets();
+    const keywords = [];
+    result.forEach((row) => {
+        if (!keywords.some(e => e.key === row.key)) {
+            keywords.push({
+                keywordId: row.keywordId,
+                name: row.name,
+                key: row.key,
+                keywords: [],
+                phrases: []
+            });
+        }
+        let targetRow = keywords.find(e => e.key === row.key);
+        if (row.isPhrase) {
+            targetRow.phrases.push(row.target);
+        } else {
+            targetRow.keywords.push(row.target);
+        }
+    });
+    // console.log(keywords);
+    return keywords;
+}
 
-    const out = reviews2.map((text) => {
+module.exports.main = async (reviews) => {
+// const main = async () => {
+    // const reviews = reviews1;
+    const keywords = await pullKeywords();
+    // console.log(keywords);
 
-        const keywordCount = analyse(text);
+    let keywordCount = {};
+    keywords.forEach((keyword) => {
+        keywordCount[keyword.key] = {
+            count: 0,
+            id: keyword.keywordId
+        }
+    });
+    // console.log(keywordCount);
 
-        return { text, keywordCount };
+    // console.log(keywords)
+    const out = reviews.map((text) => {
+        // console.log(keywords);
+        
+        const result = analyse(text, keywords);
+        // console.log(result);
+        return { text, result };
     
     });
 
-    console.log(out);
-
-    let keywordCount = {
-        grindy: 0,
-        adverts: 0,
-        lootboxes: 0,
-        timers: 0,
-        payToWin: 0,
-        freeToPlay: 0,
-    }
-
+    // console.log(out[0]);
+    // console.log(keywordCount);
     out.forEach((review) => {
         for (const [key, value] of Object.entries(keywordCount)) {
-            keywordCount[key] += review.keywordCount[key];
+            keywordCount[key].count += review.result[key];
         }
     })
-    console.log(keywordCount);   
+    // console.log('keywordCount');   
+    // console.log(keywordCount);
+    const used = process.memoryUsage().heapUsed / 1024 / 1024;
+    console.log(`The script uses approximately ${Math.round(used * 100) / 100} MB`);
+    // 56.85 MB
+//     { grindy: { count: 1, id: 1 },
+//   adverts: { count: 0, id: 2 },
+//   lootboxes: { count: 0, id: 3 },
+//   timers: { count: 1, id: 4 },
+//   payToWin: { count: 4, id: 5 },
+//   freeToPlay: { count: 1, id: 6 } }
+    return keywordCount;
 
 };
 
-main();
+// main();
 
 
